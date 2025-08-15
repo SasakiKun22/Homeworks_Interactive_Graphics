@@ -8,6 +8,7 @@
 let scene, camera, renderer;
 let world = {};
 let player = null;
+let enemies = [];
 let clock = new THREE.Clock(); // Importante: clock per deltaTime
 
 // Configurazione
@@ -81,6 +82,10 @@ function init() {
         console.log('Player creato con successo');
     } else {
         console.error('Classe Player non trovata! Assicurati di includere player.js');
+    }
+
+    for (let i = 0; i < 20; i++) {
+        spawnEnemy();
     }
     
     // Event listeners
@@ -343,6 +348,23 @@ function setupLights() {
     scene.add(hemisphereLight);
 }
 
+function spawnEnemy() {
+    const types = ['goblin', 'orc', 'vampire'];
+    const type = types[Math.floor(Math.random() * types.length)];
+    
+    // Posizione random intorno al mondo
+    const angle = Math.random() * Math.PI * 2;
+    const distance = 20 + Math.random() * 30;
+    const position = new THREE.Vector3(
+        Math.sin(angle) * distance,
+        0,
+        Math.cos(angle) * distance
+    );
+    
+    const enemy = new Enemy(scene, position, type);
+    enemies.push(enemy);
+}
+
 // Gestione resize finestra
 function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -369,15 +391,17 @@ function animate() {
         camera.lookAt(0, 0, 0);
     }
     
-    // Qui potrai aggiungere altri update del gioco
-    // Per esempio:
-    // - Update dei nemici
-    // - Update del sistema di particelle
-    // - Update della UI
-    // - Controllo collisioni
+    // Update enemies
+    enemies = enemies.filter(enemy => {
+        if (enemy.isDead()) {
+            return false; // Rimuovi nemici morti
+        }
+        enemy.update(deltaTime, player);
+        return true;
+    });
     
-    // Render della scena
     renderer.render(scene, camera);
+    //requestAnimationFrame(animate);
 }
 
 // Avvia quando la pagina è caricata
