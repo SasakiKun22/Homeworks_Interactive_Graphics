@@ -69,6 +69,11 @@ class Enemy {
         this.velocity = new THREE.Vector3(0, 0, 0);
         this.rotation = 0;
         this.targetRotation = 0;
+
+        // Proprietà di combattimento
+        this.chasingSpeedMultiplier = 1;
+        this.hasDealtDamage = false;
+        this.originalColor = null;
         
         // Target per movimento
         this.targetPosition = null;
@@ -113,6 +118,7 @@ class Enemy {
                 wanderTime: { min: 3, max: 8 },
                 modelPath: null,
                 modelScale: 1,
+                collisionRadius: 0.7,
                 animationPaths: {}
             },
             orc: {
@@ -124,18 +130,19 @@ class Enemy {
                 attackCooldown: 2,
                 detectionRange: 12,
                 wanderRadius: 8,
-                size: 1.5,
+                size: 3,
                 color: 0x00ff00,
                 idleTime: { min: 3, max: 6 },
                 wanderTime: { min: 4, max: 10 },
                 modelPath: '../models/enemies/orc/Orc.fbx',
                 modelScale: 0.025,
+                collisionRadius: 1.2,
                 animationPaths: {
                     [EnemyStates.IDLE]: '../models/enemies/orc/Idle.fbx',
                     [EnemyStates.WANDERING]: '../models/enemies/orc/Walk.fbx',
-                    // [EnemyStates.ATTACKING]: 'models/enemies/orc/Attack.fbx',
+                    [EnemyStates.ATTACKING]: '../models/enemies/orc/Attack.fbx',
                     // [EnemyStates.HURT]: 'models/enemies/orc/Hit.fbx',
-                    // [EnemyStates.DEAD]: 'models/enemies/orc/Death.fbx',
+                    [EnemyStates.DEAD]: '../models/enemies/orc/Death.fbx',
                 }
             },
             vampire: {
@@ -143,19 +150,22 @@ class Enemy {
                 maxHealth: 30,
                 speed: 2,
                 attackDamage: 15,
-                attackRange: 1.5,
-                attackCooldown: 1,
+                attackRange: 2,
+                attackCooldown: 3,
                 detectionRange: 20,
                 wanderRadius: 15,
-                size: 0.9,
+                size: 1.5,
                 color: 0xcccccc,
                 idleTime: { min: 1, max: 3 },
                 wanderTime: { min: 2, max: 5 },
                 modelPath: '../models/enemies/vampire/Vampire.fbx',
                 modelScale: 0.015,
+                collisionRadius: 0.9,
                 animationPaths: {
                     [EnemyStates.IDLE]: '../models/enemies/vampire/Idle.fbx',
                     [EnemyStates.WANDERING]: '../models/enemies/vampire/Walk.fbx',
+                    [EnemyStates.ATTACKING]: '../models/enemies/vampire/Bite.fbx',
+                    [EnemyStates.DEAD]: '../models/enemies/vampire/Death.fbx',
                     // Aggiungi altre animazioni del vampiro qui
                 }
             }
@@ -167,15 +177,12 @@ class Enemy {
     // Caricamento modello FBX
     loadFBXModel() {
         if (typeof THREE.FBXLoader === 'undefined') {
-            console.error('FBXLoader non trovato!');
             this.createPlaceholderModel();
             return;
         }
         
         this.loader = new THREE.FBXLoader();
-        
-        console.log(`[${this.id}] Caricamento modello ${this.type} da ${this.config.modelPath}...`);
-        
+                
         this.loader.load(
             this.config.modelPath,
             (fbx) => this.onModelLoaded(fbx),
@@ -184,9 +191,7 @@ class Enemy {
         );
     }
     
-    onModelLoaded(fbx) {
-        console.log(`[${this.id}] Modello ${this.type} caricato con successo!`);
-        
+    onModelLoaded(fbx) {        
         this.model = fbx;
         this.model.scale.set(this.config.modelScale, this.config.modelScale, this.config.modelScale);
         this.model.position.copy(this.position);
@@ -208,7 +213,6 @@ class Enemy {
                                  child.name === 'mixamorigHips')) {
                 this.rootBone = child;
                 this.rootBoneInitialPosition = child.position.clone();
-                console.log(`[${this.id}] Root bone trovato:`, child.name);
             }
         });
         
@@ -228,14 +232,12 @@ class Enemy {
         this.mixer = new THREE.AnimationMixer(fbx);
         
         if (fbx.animations && fbx.animations.length > 0) {
-            console.log(`[${this.id}] Trovate ${fbx.animations.length} animazioni nel modello`);
             
             // Per animazioni Mixamo con nome generico
             if (fbx.animations[0].name === 'mixamo.com' || fbx.animations.length === 1) {
                 // Assumiamo sia idle se nel file principale
                 const action = this.mixer.clipAction(fbx.animations[0]);
                 this.animations[EnemyStates.IDLE] = action;
-                console.log(`[${this.id}] Animazione principale assegnata come idle`);
             }
         }
         
@@ -261,9 +263,7 @@ class Enemy {
                     if (fbx.animations && fbx.animations.length > 0) {
                         const clip = fbx.animations[0];
                         clip.name = state;
-                        
-                        console.log(`[${this.id}] Animazione ${state}: durata ${clip.duration}s`);
-                        
+                                                
                         const action = this.mixer.clipAction(clip, this.model);
                         this.animations[state] = action;
                         
@@ -273,8 +273,6 @@ class Enemy {
                         if (state === EnemyStates.IDLE && !this.currentAction) {
                             this.playAnimation(EnemyStates.IDLE);
                         }
-                        
-                        console.log(`[${this.id}] Animazione ${state} caricata (${loadedCount}/${totalAnimations})`);
                     }
                 },
                 (progress) => {
@@ -294,7 +292,6 @@ class Enemy {
     onLoadProgress(progress) {
         if (progress.lengthComputable) {
             const percentComplete = progress.loaded / progress.total * 100;
-            console.log(`[${this.id}] Caricamento modello: ${Math.round(percentComplete)}%`);
         }
     }
     
@@ -483,11 +480,43 @@ class Enemy {
         
         const state = this.stateMachine.getState();
         
+        // Controlla la distanza dal player per decidere se inseguire
+        if (this.player && this.player.isAlive()) {
+            const distanceToPlayer = this.position.distanceTo(this.player.getPosition());
+            
+            // Se il player è nel raggio di detection e non siamo già in stati di combattimento
+            if (distanceToPlayer <= this.config.detectionRange && 
+                !this.stateMachine.isState(EnemyStates.HURT) &&
+                !this.stateMachine.isState(EnemyStates.DEAD)) {
+                
+                // Se siamo abbastanza vicini per attaccare
+                if (distanceToPlayer <= this.config.attackRange) {
+                    if (!this.stateMachine.isState(EnemyStates.ATTACKING) && this.attackTimer <= 0) {
+                        this.changeState(EnemyStates.ATTACKING);
+                    }
+                } 
+                // Altrimenti insegui
+                else if (!this.stateMachine.isState(EnemyStates.CHASING)) {
+                    this.changeState(EnemyStates.CHASING);
+                }
+            }
+            // Se il player è fuori dal raggio e stavamo inseguendo
+            else if (this.stateMachine.isState(EnemyStates.CHASING)) {
+                this.changeState(EnemyStates.IDLE);
+            }
+        }
+        
+        // Stati normali quando non c'è inseguimento
         switch (state) {
             case EnemyStates.IDLE:
-                // Dopo un po' di idle, inizia a vagare
+                // Dopo un po' di idle, inizia a vagare (solo se non c'è player vicino)
                 if (this.idleTimer <= 0) {
-                    this.changeState(EnemyStates.WANDERING);
+                    const shouldWander = !this.player || 
+                        this.position.distanceTo(this.player.getPosition()) > this.config.detectionRange;
+                    
+                    if (shouldWander) {
+                        this.changeState(EnemyStates.WANDERING);
+                    }
                 }
                 break;
                 
@@ -498,10 +527,36 @@ class Enemy {
                 }
                 break;
                 
+            case EnemyStates.ATTACKING:
+                // Dopo l'attacco, torna a inseguire o idle
+                if (this.stateMachine.getStateTime() > this.config.attackCooldown) {
+                    if (this.player && this.player.isAlive()) {
+                        const distanceToPlayer = this.position.distanceTo(this.player.getPosition());
+                        if (distanceToPlayer <= this.config.detectionRange) {
+                            this.changeState(EnemyStates.CHASING);
+                        } else {
+                            this.changeState(EnemyStates.IDLE);
+                        }
+                    } else {
+                        this.changeState(EnemyStates.IDLE);
+                    }
+                }
+                break;
+                
             case EnemyStates.HURT:
                 // Recupera dopo essere stato colpito
                 if (this.stateMachine.getStateTime() > 0.5) {
-                    this.changeState(EnemyStates.IDLE);
+                    // Dopo essere stato colpito, insegui il player se è vicino
+                    if (this.player && this.player.isAlive()) {
+                        const distanceToPlayer = this.position.distanceTo(this.player.getPosition());
+                        if (distanceToPlayer <= this.config.detectionRange) {
+                            this.changeState(EnemyStates.CHASING);
+                        } else {
+                            this.changeState(EnemyStates.IDLE);
+                        }
+                    } else {
+                        this.changeState(EnemyStates.IDLE);
+                    }
                 }
                 break;
         }
@@ -509,7 +564,6 @@ class Enemy {
     
     changeState(newState) {
         if (this.stateMachine.changeState(newState)) {
-            console.log(`[${this.id}] Stato cambiato: ${this.stateMachine.previousState} -> ${newState}`);
             this.onStateEnter(newState);
         }
     }
@@ -544,9 +598,40 @@ class Enemy {
                 }
                 break;
                 
+            case EnemyStates.CHASING:                
+                // Usa l'animazione di camminata anche per l'inseguimento
+                if (this.animations[EnemyStates.WANDERING]) {
+                    this.playAnimation(EnemyStates.WANDERING);
+                } else if (this.animations[EnemyStates.CHASING]) {
+                    // Se hai un'animazione specifica per la corsa, usala
+                    this.playAnimation(EnemyStates.CHASING);
+                }
+                
+                // Aumenta leggermente la velocità durante l'inseguimento
+                this.chasingSpeedMultiplier = 1.3;
+                break;
+                
             case EnemyStates.ATTACKING:
                 this.attackTimer = this.config.attackCooldown;
+                this.hasDealtDamage = false;
+                
+                // Se hai un'animazione di attacco, usala
+                if (this.animations[EnemyStates.ATTACKING]) {
+                    this.playAnimation(EnemyStates.ATTACKING, false); // false = no loop
+                }
                 break;
+                
+            case EnemyStates.HURT:
+                // Opzionale: suono o effetto quando viene colpito
+                if (this.animations[EnemyStates.HURT]) {
+                    this.playAnimation(EnemyStates.HURT, false);
+                }
+                break;
+
+            case EnemyStates.DEAD:
+                if (this.animations[EnemyStates.DEAD]){
+                    this.playAnimation(EnemyStates.DEAD, false)
+                }
         }
     }
     
@@ -557,7 +642,6 @@ class Enemy {
         const newAction = this.animations[name];
         
         if (!newAction) {
-            console.warn(`[${this.id}] Animazione '${name}' non trovata`);
             return;
         }
         
@@ -584,7 +668,6 @@ class Enemy {
         newAction.play();
         this.currentAction = newAction;
         
-        console.log(`[${this.id}] Animazione cambiata a: ${name}`);
     }
     
     // ========== UPDATE STATI ==========
@@ -592,6 +675,12 @@ class Enemy {
     updateIdle(deltaTime) {
         // Fermo, nessun movimento
         this.velocity.lerp(new THREE.Vector3(0, 0, 0), 10 * deltaTime);
+        
+        // Ripristina colore originale se era in chasing
+        if (this.originalColor && this.model && this.model.children[0] && this.model.children[0].material) {
+            this.model.children[0].material.color.setHex(this.originalColor);
+            this.originalColor = null;
+        }
         
         // Guarda in giro occasionalmente
         if (Math.random() < 0.01) {
@@ -618,11 +707,128 @@ class Enemy {
     }
     
     updateChasing(deltaTime) {
-        // TODO: Implementare inseguimento del player
+        if (!this.player || !this.player.isAlive()) {
+            this.changeState(EnemyStates.IDLE);
+            return;
+        }
+        
+        const playerPosition = this.player.getPosition();
+        const distanceToPlayer = this.position.distanceTo(playerPosition);
+        
+        // Se siamo troppo lontani, smetti di inseguire
+        if (distanceToPlayer > this.config.detectionRange * 1.5) {
+            this.changeState(EnemyStates.IDLE);
+            return;
+        }
+        
+        // Se siamo abbastanza vicini per attaccare
+        if (distanceToPlayer <= this.config.attackRange && this.attackTimer <= 0) {
+            this.changeState(EnemyStates.ATTACKING);
+            return;
+        }
+        
+        // Calcola direzione verso il player
+        const direction = new THREE.Vector3()
+            .subVectors(playerPosition, this.position)
+            .normalize();
+        
+        // Applica velocità verso il player (con boost di velocità)
+        const chaseSpeed = this.config.speed * (this.chasingSpeedMultiplier || 1.3);
+        const targetVelocity = direction.multiplyScalar(chaseSpeed);
+        
+        // Interpolazione più aggressiva per inseguimento
+        this.velocity.lerp(targetVelocity, 8 * deltaTime);
+        
+        // Rotazione immediata verso il player
+        if (this.velocity.length() > 0.1) {
+            this.targetRotation = Math.atan2(direction.x, direction.z);
+        }
+        
+        // Debug visivo opzionale: cambia colore durante inseguimento
+        if (this.model && this.model.children[0] && this.model.children[0].material) {
+            // Tinge leggermente di rosso durante l'inseguimento
+            if (!this.originalColor) {
+                this.originalColor = this.model.children[0].material.color.getHex();
+            }
+            // Mix tra colore originale e rosso
+            const aggroColor = 0xff6666;
+            this.model.children[0].material.color.setHex(aggroColor);
+        }
     }
     
     updateAttacking(deltaTime) {
-        // TODO: Implementare attacco
+        if (!this.player || !this.player.isAlive()) {
+            this.changeState(EnemyStates.IDLE);
+            return;
+        }
+        
+        // Rallenta movimento durante l'attacco
+        this.velocity.lerp(new THREE.Vector3(0, 0, 0), 10 * deltaTime);
+        
+        // Guarda verso il player durante l'attacco
+        const playerPosition = this.player.getPosition();
+        const direction = new THREE.Vector3()
+            .subVectors(playerPosition, this.position)
+            .normalize();
+        this.targetRotation = Math.atan2(direction.x, direction.z);
+        
+        // Calcola quando applicare il danno basandosi sul tempo dell'animazione
+        const attackProgress = this.stateMachine.getStateTime() / this.config.attackCooldown;
+        const damageTimingPercent = 0.5; // Danno a metà animazione
+        
+        // Applica danno al player al momento giusto dell'animazione
+        if (attackProgress >= damageTimingPercent && !this.hasDealtDamage) {
+            const distanceToPlayer = this.position.distanceTo(playerPosition);
+            
+            if (distanceToPlayer <= this.config.attackRange * 1.2) {
+                // Applica danno al player
+                if (this.player.takeDamage) {
+                    this.player.takeDamage(this.config.attackDamage);
+                    console.log(`[${this.id}] ${this.type} infligge ${this.config.attackDamage} danni al player!`);
+                }
+                
+                // Effetto visivo dell'attacco
+                this.createAttackEffect();
+            }
+            
+            this.hasDealtDamage = true;
+        }
+        
+        // Reset dopo l'attacco
+        if (this.stateMachine.getStateTime() > this.config.attackCooldown) {
+            this.hasDealtDamage = false;
+        }
+    }
+
+    // Effetto visivo dell'attacco
+    createAttackEffect() {
+        if (!this.model) return;
+        
+        // Crea un effetto slash davanti al nemico
+        const slashGeometry = new THREE.RingGeometry(1, 2, 4, 1, 0, Math.PI/2);
+        const slashMaterial = new THREE.MeshBasicMaterial({ 
+            color: 0xff0000, 
+            transparent: true, 
+            opacity: 0.5,
+            side: THREE.DoubleSide
+        });
+        const slash = new THREE.Mesh(slashGeometry, slashMaterial);
+        
+        // Posiziona davanti al nemico
+        slash.position.copy(this.position);
+        slash.position.y = 1;
+        slash.position.z = -0.5;
+        slash.rotation.x = -Math.PI / 2;
+        slash.rotation.z = Math.PI;
+        
+        this.scene.add(slash);
+        
+        // Rimuovi dopo poco
+        setTimeout(() => {
+            this.scene.remove(slash);
+            slash.geometry.dispose();
+            slash.material.dispose();
+        }, 200);
     }
     
     updateHurt(deltaTime) {
@@ -638,10 +844,100 @@ class Enemy {
     // ========== FISICA ==========
     
     updatePhysics(deltaTime) {
+        // Salva la posizione precedente per il rollback
+        const previousPosition = this.position.clone();
+        
         // Applica velocità
         this.position.add(
             this.velocity.clone().multiplyScalar(deltaTime)
         );
+        
+        // Controlla collisione con il player
+        if (this.player && this.player.isAlive()) {
+            const playerPos = this.player.getPosition();
+            const distance = this.position.distanceTo(playerPos);
+            const playerRadius = 1; // Raggio standard del player
+            const minDistance = (this.config.collisionRadius || this.config.size * 0.8) + playerRadius;
+            
+            if (distance < minDistance && distance > 0) {
+                // I nemici vengono spinti MOLTO POCO dal player
+                // Questo li rende più "pesanti" e difficili da spostare
+                const pushDirection = new THREE.Vector3()
+                    .subVectors(this.position, playerPos)
+                    .normalize();
+                
+                const overlap = minDistance - distance;
+                
+                // Sposta il nemico solo di una frazione minima (10% dell'overlap)
+                // Questo fa sì che sia principalmente il player a essere bloccato
+                this.position.add(pushDirection.multiplyScalar(overlap * 0.1));
+                
+                // Riduci anche la velocità del nemico quando viene colpito dal player
+                // Ma non troppo se sta inseguendo
+                if (!this.stateMachine.isState(EnemyStates.CHASING)) {
+                    this.velocity.multiplyScalar(0.8);
+                }
+            }
+        }
+
+        // Controlla collisioni con altri nemici - SISTEMA MIGLIORATO
+        if (window.enemies) {
+            window.enemies.forEach(otherEnemy => {
+                if (otherEnemy !== this && otherEnemy.isAlive()) {
+                    const otherPos = otherEnemy.getPosition();
+                    const distance = this.position.distanceTo(otherPos);
+                    const thisRadius = this.config.collisionRadius || this.config.size * 0.6;
+                    const otherRadius = otherEnemy.config.collisionRadius || otherEnemy.config.size * 0.6;
+                    const minDistance = thisRadius + otherRadius;
+                    
+                    if (distance < minDistance && distance > 0.01) { // Evita divisione per zero
+                        // Calcola la direzione di push
+                        const pushDirection = new THREE.Vector3()
+                            .subVectors(this.position, otherPos)
+                            .normalize();
+                        
+                        const overlap = minDistance - distance;
+                        
+                        // Sposta ENTRAMBI i nemici equamente (50% ciascuno)
+                        // Questo previene la compenetrazione
+                        this.position.add(pushDirection.multiplyScalar(overlap * 0.5));
+                        
+                        // Sposta anche l'altro nemico nella direzione opposta
+                        otherEnemy.position.sub(pushDirection.multiplyScalar(overlap * 0.5));
+                        
+                        // Se si stanno muovendo l'uno verso l'altro, fermali
+                        const relativeVelocity = this.velocity.clone().sub(otherEnemy.velocity);
+                        const velocityTowardsEachOther = relativeVelocity.dot(pushDirection.negate());
+                        
+                        if (velocityTowardsEachOther > 0) {
+                            // Riduci la componente della velocità che li porta l'uno verso l'altro
+                            const correction = pushDirection.multiplyScalar(velocityTowardsEachOther * 0.5);
+                            this.velocity.sub(correction);
+                            otherEnemy.velocity.add(correction);
+                        }
+                        
+                        // Aggiungi una piccola forza di separazione per evitare che restino incastrati
+                        // Specialmente importante quando inseguono lo stesso target
+                        if (this.stateMachine.isState(EnemyStates.CHASING) && 
+                            otherEnemy.stateMachine.isState(EnemyStates.CHASING)) {
+                            // Forza laterale per separarli quando inseguono
+                            const lateralPush = new THREE.Vector3(-pushDirection.z, 0, pushDirection.x);
+                            this.velocity.add(lateralPush.multiplyScalar(1));
+                            otherEnemy.velocity.sub(lateralPush.multiplyScalar(1));
+                        }
+                    } else if (distance === 0) {
+                        // Se sono esattamente nella stessa posizione, separali
+                        const randomDirection = new THREE.Vector3(
+                            Math.random() - 0.5,
+                            0,
+                            Math.random() - 0.5
+                        ).normalize();
+                        this.position.add(randomDirection.multiplyScalar(thisRadius));
+                        otherEnemy.position.sub(randomDirection.multiplyScalar(otherRadius));
+                    }
+                }
+            });
+        }
         
         // Limiti del mondo
         const worldLimit = 95;
@@ -731,45 +1027,92 @@ class Enemy {
         this.config.health -= amount;
         this.config.health = Math.max(0, this.config.health);
         
-        console.log(`[${this.id}] Danno ricevuto: ${amount}, Salute: ${this.config.health}/${this.config.maxHealth}`);
+        console.log(`[${this.id}] ${this.type} colpito! Danno: ${amount}, Salute: ${this.config.health}/${this.config.maxHealth}`);
         
         if (this.config.health <= 0) {
             this.changeState(EnemyStates.DEAD);
             this.onDeath();
+            
+            // Notifica globale per conteggio kill (opzionale)
+            if (window.onEnemyKilled) {
+                window.onEnemyKilled(this);
+            }
         } else {
+            // Cambia stato a HURT
             this.changeState(EnemyStates.HURT);
             
-            // Knockback
+            // Knockback dal punto di impatto
             if (fromPosition) {
                 const knockbackDirection = new THREE.Vector3()
                     .subVectors(this.position, fromPosition)
                     .normalize();
-                this.velocity.add(knockbackDirection.multiplyScalar(5));
+                
+                // Knockback più forte
+                this.velocity.add(knockbackDirection.multiplyScalar(8));
             }
             
-            // Flash rosso
-            this.flashDamage();
+            // Flash di danno
+            //wadathis.flashDamage();
+            
+            // Dopo essere stato colpito, se il player è vicino, inizia a inseguirlo
+            setTimeout(() => {
+                if (this.isAlive() && this.player && this.player.isAlive()) {
+                    const distanceToPlayer = this.position.distanceTo(this.player.getPosition());
+                    if (distanceToPlayer <= this.config.detectionRange * 1.5) {
+                        this.changeState(EnemyStates.CHASING);
+                    }
+                }
+            }, 500);
         }
     }
     
     flashDamage() {
         if (!this.model) return;
         
+        // Flash bianco per tutti i mesh del modello
+        const flashColor = 0xffffff;
+        const originalColors = [];
+        
         this.model.traverse((child) => {
             if (child.isMesh && child.material) {
-                const originalColor = child.material.color.clone();
-                child.material.color.setHex(0xffffff);
-                setTimeout(() => {
-                    if (child.material) {
-                        child.material.color.copy(originalColor);
-                    }
-                }, 100);
+                // Salva il colore originale
+                originalColors.push({
+                    mesh: child,
+                    color: child.material.color.clone(),
+                    emissive: child.material.emissive ? child.material.emissive.clone() : null
+                });
+                
+                // Applica il flash
+                child.material.color.setHex(flashColor);
+                if (child.material.emissive) {
+                    child.material.emissive.setHex(0xff0000);
+                }
             }
         });
+        
+        // Ripristina i colori originali dopo un breve delay
+        setTimeout(() => {
+            originalColors.forEach(item => {
+                if (item.mesh.material) {
+                    item.mesh.material.color.copy(item.color);
+                    if (item.emissive && item.mesh.material.emissive) {
+                        item.mesh.material.emissive.copy(item.emissive);
+                    }
+                }
+            });
+        }, 100);
     }
     
     onDeath() {
         console.log(`[${this.id}] Morto!`);
+        
+        // IMPORTANTE: Notifica al player che ha fatto un kill
+        if (window.player && typeof window.player.addKill === 'function') {
+            window.player.addKill();
+            console.log(`💀 Kill registrato per ${this.type}!`);
+        } else {
+            console.warn('Player non trovato o metodo addKill non disponibile');
+        }
         
         // Animazione morte (fade out e cade)
         if (this.model) {

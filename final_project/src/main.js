@@ -83,8 +83,11 @@ function init() {
     } else {
         console.error('Classe Player non trovata! Assicurati di includere player.js');
     }
+    window.player = player
 
-    for (let i = 0; i < 20; i++) {
+    setupScoreSystem();
+
+    for (let i = 0; i < 5; i++) {
         spawnEnemy();
     }
     
@@ -93,6 +96,49 @@ function init() {
     
     // Avvia il game loop
     animate();
+}
+
+function setupScoreSystem() {
+    // Usa il callback già esistente in enemy.js
+    window.onEnemyKilled = function(enemy) {
+        if (!window.player || !window.player.addScore) {
+            console.error('Player non trovato o metodo addScore non disponibile');
+            return;
+        }
+        
+        // Punti diversi per tipo di nemico
+        const pointsPerEnemy = {
+            goblin: 100,
+            orc: 200,
+            vampire: 100,
+        };
+        
+        // Ottieni i punti per questo tipo di nemico
+        const points = pointsPerEnemy[enemy.getType()] || 100;
+        
+        // Aggiungi i punti al player
+        window.player.addScore(points);
+        
+        // IMPORTANTE: Il kill viene già registrato nel metodo onDeath() dell'enemy
+        // Non serve chiamare addKill() qui per evitare doppi conteggi
+        
+        console.log(`Nemico ${enemy.getType()} sconfitto! +${points} punti`);
+        
+        // Rimuovi il nemico dall'array globale
+        const index = enemies.indexOf(enemy);
+        if (index > -1) {
+            enemies.splice(index, 1);
+            console.log(`Nemici rimasti: ${enemies.length}`);
+        }
+        
+        // Spawna un nuovo nemico dopo un delay per mantenere il gioco attivo
+        setTimeout(() => {
+            if (enemies.length < 8) { // Mantieni massimo 8 nemici
+                spawnEnemy();
+                console.log('Nuovo nemico spawnato!');
+            }
+        }, 3000);
+    };
 }
 
 // Creazione del mondo (aggiornata con texture)
@@ -374,34 +420,24 @@ function onWindowResize() {
 
 // ===== FUNZIONE ANIMATE AGGIORNATA =====
 function animate() {
-    requestAnimationFrame(animate);
-    
-    // Ottieni deltaTime dal clock
     const deltaTime = clock.getDelta();
     
-    // Se il player esiste, aggiornalo
+    // Update player
     if (player) {
         player.update(deltaTime);
-        // La camera viene aggiornata automaticamente dal player
-    } else {
-        // Se non c'è il player, mantieni la rotazione della camera originale
-        const time = Date.now() * 0.0005;
-        camera.position.x = Math.cos(time) * 40;
-        camera.position.z = Math.sin(time) * 40;
-        camera.lookAt(0, 0, 0);
     }
     
-    // Update enemies
-    enemies = enemies.filter(enemy => {
+    // Update enemies - IMPORTANTE: usa la stessa variabile
+    window.enemies = enemies.filter(enemy => {
         if (enemy.isDead()) {
-            return false; // Rimuovi nemici morti
+            return false;
         }
         enemy.update(deltaTime, player);
         return true;
     });
     
     renderer.render(scene, camera);
-    //requestAnimationFrame(animate);
+    requestAnimationFrame(animate);
 }
 
 // Avvia quando la pagina è caricata

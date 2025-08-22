@@ -8,12 +8,61 @@
 </head>
 <body>
     <div id="loading">Caricamento...</div>
+
+    <div id="player-health-ui">
+        <div class="health-label">HEALTH</div>
+        <div class="health-bar-container">
+            <div class="health-bar-background"></div>
+            <div id="player-health-bar" class="health-bar"></div>
+            <div class="health-bar-shine"></div>
+            <div id="player-health-text" class="health-text">100/100</div>
+        </div>
+    </div>
+
+    <!-- UI del punteggio -->
+    <div id="score-ui">
+        <div class="score-label">SCORE</div>
+        <div id="score-value" class="score-value">0</div>
+    </div>
+
+    <div id="spell-ui">
+        <!-- Spell di Cura -->
+        <div id="heal-spell" class="spell-slot spell-ready">
+            <div class="spell-icon">💚</div>
+            <div class="spell-key">E</div>
+            <div class="spell-counter">0</div>
+            <div class="spell-tooltip">Heal Spell - 7 kills</div>
+        </div>
+        
+        <!-- Spell Scudo -->
+        <div id="shield-spell" class="spell-slot spell-ready">
+            <div class="spell-icon">🛡️</div>
+            <div class="spell-key">Q</div>
+            <div class="spell-counter">0</div>
+            <div class="spell-tooltip">Ice Shield - 5 kills</div>
+        </div>
+        
+        <!-- Spell Fuoco -->
+        <div id="firewall-spell" class="spell-slot spell-ready">
+            <div class="spell-icon">🔥</div>
+            <div class="spell-key">R</div>
+            <div class="spell-counter">0</div>
+            <div class="spell-tooltip">Fire Wall - 10 kills</div>
+        </div>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     
     <script src="https://cdn.jsdelivr.net/npm/fflate@0.7.4/umd/index.js"></script>
     
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/FBXLoader.js"></script>
-    <script src="./src/main.js"></script>
+
+    <script src="./src/healingSpell.js"></script>
+    <script src="./src/iceShield.js"></script>
+    <script src="./src/fireWall.js"></script>
     <script src="./src/player.js"></script>
+    <script src="./src/enemy.js"></script>
+    <script src="./src/main.js"></script>
+    
 </body>
 </html>
