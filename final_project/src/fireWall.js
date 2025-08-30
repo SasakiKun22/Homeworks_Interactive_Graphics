@@ -9,7 +9,6 @@ class FireWall {
         this.fireTexture = this.createFireTexture();
         this.smokeTexture = this.createSmokeTexture();
         
-        console.log('✅ FireWall inizializzato');
     }
 
     // Crea texture procedurali per il fuoco
@@ -63,12 +62,12 @@ class FireWall {
         const fireWall = {
             id: fireWallId,
             startTime: Date.now(),
-            duration: config.duration || 3000, // 3 secondi di durata
+            duration: config.duration || 3000, 
             speed: config.speed || 15,
             range: config.range || 15,
             damage: config.damage || 100,
-            width: config.width || 8, // Larghezza del muro
-            height: config.height || 4, // Altezza del muro
+            width: config.width || 8, 
+            height: config.height || 4, 
             
             position: startPosition.clone(),
             direction: direction.clone().normalize(),
@@ -102,7 +101,7 @@ class FireWall {
 
     // Crea il sistema di particelle per il fuoco
     createFireParticleSystem(fireWall) {
-        const particleCount = 1000; // Aumentato da 500 a 800
+        const particleCount = 1000; 
         
         // Geometria per le particelle
         const geometry = new THREE.BufferGeometry();
@@ -134,7 +133,7 @@ class FireWall {
             
             // Velocità (principalmente verso l'alto con un po' di randomness)
             velocities[i3] = (Math.random() - 0.5) * 2;
-            velocities[i3 + 1] = 2 + Math.random() * 3; // Verso l'alto
+            velocities[i3 + 1] = 2 + Math.random() * 3;
             velocities[i3 + 2] = (Math.random() - 0.5) * 2;
             
             // Vita della particella
@@ -144,26 +143,26 @@ class FireWall {
             // Dimensione
             sizes[i] = 0.5 + Math.random() * 1;
             
-            // Colore (sfumature di fuoco con gradiente verticale)
+            // Colore
             const fireIntensity = Math.random();
-            const heightRatio = heightOffset / fireWall.height; // 0 = basso, 1 = alto
+            const heightRatio = heightOffset / fireWall.height;
             
-            // Gradiente dal rosso (basso) al giallo (alto) - valori fissi più chiari
+            // Gradiente dal rosso (basso) al giallo (alto)
             if (heightRatio < 0.3) {
                 // Basso: Rosso puro
-                colors[i3] = 1; // Rosso
-                colors[i3 + 1] = 0.1 + fireIntensity * 0.2; // Verde molto basso
-                colors[i3 + 2] = 0; // Blu zero
+                colors[i3] = 1;
+                colors[i3 + 1] = 0.1 + fireIntensity * 0.2; 
+                colors[i3 + 2] = 0; 
             } else if (heightRatio < 0.7) {
                 // Medio: Arancione
-                colors[i3] = 1; // Rosso
-                colors[i3 + 1] = 0.4 + fireIntensity * 0.3; // Verde medio
-                colors[i3 + 2] = 0; // Blu zero
+                colors[i3] = 1; 
+                colors[i3 + 1] = 0.4 + fireIntensity * 0.3; 
+                colors[i3 + 2] = 0;
             } else {
                 // Alto: Giallo
-                colors[i3] = 1; // Rosso
-                colors[i3 + 1] = 0.8 + fireIntensity * 0.2; // Verde alto
-                colors[i3 + 2] = 0; // Blu zero
+                colors[i3] = 1;
+                colors[i3 + 1] = 0.8 + fireIntensity * 0.2; 
+                colors[i3 + 2] = 0; 
             }
         }
         
@@ -258,7 +257,7 @@ class FireWall {
 
     // Crea il sistema di particelle per il fumo
     createSmokeParticleSystem(fireWall) {
-        const particleCount = 450; // Aumentato da 200 a 350
+        const particleCount = 450; 
         
         const geometry = new THREE.BufferGeometry();
         const positions = new Float32Array(particleCount * 3);
@@ -288,7 +287,7 @@ class FireWall {
             lifetimes[i] = Math.random() * maxLifetimes[i];
             
             // Dimensioni leggermente più grandi per il fumo più denso
-            sizes[i] = 1.2 + Math.random() * 2.3; // Aumentato da 1+2 a 1.2+2.3
+            sizes[i] = 1.2 + Math.random() * 2.3;
         }
         
         geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
@@ -659,7 +658,6 @@ class FireWall {
             fireWall.collisionMesh = null;
         }
         
-        console.log(`🧹 Muro di fuoco ${fireWall.id} rimosso`);
     }
 
     // Pulisce tutti gli effetti
@@ -677,7 +675,6 @@ class FireWall {
             this.smokeTexture.dispose();
         }
         
-        console.log('🧹 FireWall completamente pulito');
     }
 
     // Getter per debug

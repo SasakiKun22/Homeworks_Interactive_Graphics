@@ -1,5 +1,3 @@
-// player.js - Gestione del giocatore con FSM (Finite State Machine)
-
 // Enum per gli stati del giocatore
 const PlayerStates = {
     IDLE: 'idle',
@@ -71,33 +69,33 @@ class Player {
         this.rotation = 0;
         this.targetRotation = 0;
         
-        // Configurazione movimento
+        // Config specifici del player
         this.config = {
             walkSpeed: 5,
             runSpeed: 10,
             acceleration: 15,
             deceleration: 10,
             rotationSpeed: 8,
-            health: 100,
+            health: 80,
             maxHealth: 100,
-            attackCooldown: 1.43,     // Durata dell'animazione di attacco
+            attackCooldown: 1.43,     
             attackDamage: 25,
-            attackRange: 5,          // Raggio d'azione dell'attacco
-            attackComboWindow: 0.5,  // Finestra per concatenare attacchi
+            attackRange: 5,          
+            attackComboWindow: 0.5, 
             collisionRadius: 1,
             attackDamageTime: 0.5,
 
-            healSpellCooldown: 1.2,        // Durata dell'animazione spell di cura
-            healSpellAmount: 30,            // Quantità di vita curata
-            healSpellCastTime: 0.5,         // Quando nell'animazione avviene la cura (60%)
+            healSpellCooldown: 1.2,        
+            healSpellAmount: 30,           
+            healSpellCastTime: 0.5,
 
             shieldCooldown: 1.2,
             shieldCastTime: 0.5,
 
-            ultyCooldown: 1.2,         // Durata dell'animazione ultimate
-            ultyDamage: 100,           // Danno dell'ultimate
-            ultyRange: 15,             // Distanza che percorre il muro
-            ultyCastTime: 0.5,         // Quando nell'animazione viene lanciata (50%)
+            ultyCooldown: 1.2,         
+            ultyDamage: 100,           
+            ultyRange: 15,             
+            ultyCastTime: 0.5, 
         };
 
         this.score = 0;
@@ -119,21 +117,21 @@ class Player {
         // Timers
         this.attackTimer = 0;
         
-        this.killCount = 0; // Contatore totale nemici uccisi
+        this.killCount = 0;           // Contatore totale nemici uccisi
         this.lastHealKills = -7;      // Nemici uccisi quando ho usato l'ultima cura
         this.lastShieldKills = -5;    // Nemici uccisi quando ho usato l'ultimo scudo
         this.lastFireWallKills = -10;  // Nemici uccisi quando ho usato l'ultimo muro di fuoco
 
         this.spellNotified = {
-            shield: true,   // Se è già stata mostrata la notifica per lo scudo
-            heal: true,     // Se è già stata mostrata la notifica per la cura
-            fireWall: true  // Se è già stata mostrata la notifica per il muro di fuoco
+            shield: true,   
+            heal: true,     
+            fireWall: true  
         };
 
         this.spellKillRequirements = {
-            shield: 5,    // Scudo si ricarica dopo 5 kill
-            heal: 7,      // Cura si ricarica dopo 7 kill  
-            fireWall: 10  // Muro di fuoco si ricarica dopo 10 kill
+            shield: 5,    
+            heal: 7,      
+            fireWall: 10  
         };
 
         this.healingSpell = null;
@@ -181,7 +179,6 @@ class Player {
                 child.castShadow = true;
                 child.receiveShadow = true;
             }
-            // Cerca il bone principale (solitamente chiamato "mixamorigHips" o "Hips")
             if (child.isBone && (child.name.toLowerCase().includes('hips') || 
                                  child.name.toLowerCase().includes('root') ||
                                  child.name === 'mixamorigHips')) {
@@ -189,7 +186,7 @@ class Player {
                 this.rootBoneInitialPosition = child.position.clone();
             }
         });
-        
+
         this.setupAnimations(fbx);
         this.scene.add(this.model);
         this.setupCamera();
@@ -312,11 +309,11 @@ class Player {
         // Mouse
         window.addEventListener('mousedown', (e) => this.onMouseDown(e));
         window.addEventListener('mouseup', (e) => this.onMouseUp(e));
-        window.addEventListener('contextmenu', (e) => e.preventDefault()); // Previeni menu contestuale
+        window.addEventListener('contextmenu', (e) => e.preventDefault()); 
     }
 
     onMouseDown(e) {
-        if (e.button === 0) { // Tasto sinistro del mouse
+        if (e.button === 0) { 
             this.input.attack = true;
         }
     }
@@ -351,7 +348,6 @@ class Player {
                 this.input.run = true;
                 break;
             case ' ':
-            case 'enter':
                 this.input.attack = true;
                 break;
             case 'e':
@@ -453,6 +449,7 @@ class Player {
                 break;
             case PlayerStates.ATTACKING:
                 this.updateAttacking(deltaTime);
+                break;
             case PlayerStates.CASTING_HEAL:
                 this.updateCastingHealSpell(deltaTime);
                 break;
@@ -461,7 +458,7 @@ class Player {
                 break;
             case PlayerStates.CASTING_ULTY:
                 this.updateCastingUlty(deltaTime);
-                    break;
+                break;
             case PlayerStates.HURT:
                 this.updateHurt(deltaTime);
                 break;
@@ -480,28 +477,23 @@ class Player {
         if (this.mixer) {
             this.mixer.update(deltaTime);
             
-            // IMPORTANTE: Resetta la posizione del root bone dopo l'update dell'animazione
-            // Questo rimuove il root motion dall'animazione
             if (this.rootBone && this.rootBoneInitialPosition) {
-                // Mantieni solo l'animazione verticale (Y) se presente, blocca X e Z
+                
                 this.rootBone.position.x = this.rootBoneInitialPosition.x;
                 this.rootBone.position.z = this.rootBoneInitialPosition.z;
-                // Opzionale: se vuoi bloccare anche il movimento verticale
-                // this.rootBone.position.y = this.rootBoneInitialPosition.y;
             }
         }
         
         // Update camera
         this.updateCamera();
 
+        // Update delle spell
         if (this.healingSpell) {
             this.healingSpell.update(deltaTime, this.position);
         }
-
         if (this.iceShield) {
             this.iceShield.update(deltaTime, this.position);
         }
-
         if (this.fireWall) {
             this.fireWall.update(deltaTime);
         }
@@ -513,7 +505,6 @@ class Player {
     // ========== INPUT ==========
     
     updateInput() {
-        // Calcola il vettore di movimento normalizzato
         let moveX = 0;
         let moveZ = 0;
         
@@ -545,7 +536,7 @@ class Player {
                 // Priorità: Ultimate > Cura > Attacco > Movimento
                 if (this.input.ulty && this.canUseFireWall()) {
                     this.changeState(PlayerStates.CASTING_ULTY);
-                } else if (this.input.healSpell &&  this.canUseHeal()) {
+                } else if (this.input.healSpell && this.canUseHeal()) {
                     this.changeState(PlayerStates.CASTING_HEAL);
                 } else if (this.input.shieldSpell && this.canUseShield()) {
                     this.changeState(PlayerStates.CASTING_SHIELD);
@@ -593,7 +584,6 @@ class Player {
                 break;
                 
             case PlayerStates.ATTACKING:
-                // L'attacco finisce dopo un certo tempo
                 if (this.stateMachine.getStateTime() > this.config.attackCooldown) {
                     if (hasMovement) {
                         this.changeState(this.input.run ? PlayerStates.RUNNING : PlayerStates.WALKING);
@@ -604,7 +594,6 @@ class Player {
                 break;
                 
             case PlayerStates.CASTING_HEAL:
-                // La spell di cura finisce dopo un certo tempo
                 if (this.stateMachine.getStateTime() > this.config.healSpellCooldown) {
                     if (hasMovement) {
                         this.changeState(this.input.run ? PlayerStates.RUNNING : PlayerStates.WALKING);
@@ -615,7 +604,6 @@ class Player {
                 break;
             
             case PlayerStates.CASTING_SHIELD:
-                // La spell di scudo finisce dopo un certo tempo
                 if (this.stateMachine.getStateTime() > this.config.shieldCooldown) {
                     if (hasMovement) {
                         this.changeState(this.input.run ? PlayerStates.RUNNING : PlayerStates.WALKING);
@@ -626,7 +614,6 @@ class Player {
                 break;
             
             case PlayerStates.CASTING_ULTY:
-                // L'ultimate finisce dopo un certo tempo
                 if (this.stateMachine.getStateTime() > this.config.ultyCooldown) {
                     if (hasMovement) {
                         this.changeState(this.input.run ? PlayerStates.RUNNING : PlayerStates.WALKING);
@@ -637,7 +624,6 @@ class Player {
                 break;
                 
             case PlayerStates.HURT:
-                // Recupera dopo essere stato colpito
                 if (this.stateMachine.getStateTime() > 0.5) {
                     this.changeState(PlayerStates.IDLE);
                 }
@@ -654,15 +640,14 @@ class Player {
     onStateEnter(state) {        
         // Cambia animazione quando entra in un nuovo stato
         if (this.animations[state]) {
-            // Per attacchi e spell, non fare loop
             if (state === PlayerStates.ATTACKING || 
                 state === PlayerStates.CASTING_HEAL || 
                 state === PlayerStates.CASTING_SHIELD ||
                 state === PlayerStates.CASTING_ULTY || 
                 state === PlayerStates.DEAD) {
-                this.playAnimation(state, false); // false = no loop
+                this.playAnimation(state, false); 
             } else {
-                this.playAnimation(state, true);  // true = loop
+                this.playAnimation(state, true);  
             }
         } else {
             console.warn(`Nessuna animazione disponibile per lo stato ${state}`);
@@ -685,15 +670,11 @@ class Player {
                 this.hasPerformedHeal = false;
                 this.updateSpellCooldownUI();
                 console.log('Lancio spell di cura!');
-                // Inizia immediatamente l'effetto visivo delle spirali
                 this.startHealingSpirals();
                 break;
             
             case PlayerStates.CASTING_SHIELD:
                 this.isShieldActive = true;
-                if (this.isShieldActive){
-                    this.lastShieldKills = this.killCount;
-                }
                 this.spellNotified.shield = false;
                 this.hasPerformedShield = false;
                 this.updateSpellCooldownUI();
@@ -712,11 +693,9 @@ class Player {
     }
 
     canUseShield() {
-        
         if (this.isShieldActive) {
             return false;
         }
-        
         const killsSinceLastUse = this.killCount - this.lastShieldKills;
         return killsSinceLastUse >= this.spellKillRequirements.shield;
     }
@@ -731,7 +710,7 @@ class Player {
         return killsSinceLastUse >= this.spellKillRequirements.fireWall;
     }
     
-    // Metodo per eseguire l'attacco (danno ai nemici, effetti, ecc.)
+    // Metodo per eseguire l'attacco
     performAttack() {
         // Controlla collisioni con nemici e applica danno
         if (window.enemies && window.enemies.length > 0) {
@@ -751,7 +730,6 @@ class Player {
                             .subVectors(enemyPosition, attackPosition)
                             .normalize();
                         
-                        // CORREZIONE: Usa la rotazione del modello invece di this.rotation
                         let playerRotation = 0;
                         if (this.model) {
                             playerRotation = this.model.rotation.y;
@@ -759,11 +737,6 @@ class Player {
                             playerRotation = this.rotation || 0;
                         }
                         
-                        // CORREZIONE: Formula corretta per la direzione in cui guarda il player
-                        // Quando rotation.y = 0, il player guarda verso -Z
-                        // Quando rotation.y = PI/2, il player guarda verso -X
-                        // Quando rotation.y = PI, il player guarda verso +Z
-                        // Quando rotation.y = -PI/2, il player guarda verso +X
                         const playerForward = new THREE.Vector3(
                             Math.sin(playerRotation),
                             0,
@@ -773,8 +746,8 @@ class Player {
                         // Calcola l'angolo tra la direzione del player e il nemico
                         const dotProduct = playerForward.dot(toEnemy);
                         
-                        // Se il nemico è nel cono frontale (circa 140 gradi = più generoso)
-                        if (dotProduct > -0.2) { // cos(140°) ≈ -0.2, più permissivo di -0.5
+                        // Se il nemico è nel cono frontale
+                        if (dotProduct > -0.2) {
                             // Applica danno al nemico
                             enemy.takeDamage(this.config.attackDamage, attackPosition);
                             enemiesHit++;
@@ -800,7 +773,6 @@ class Player {
     
     // Effetto visivo quando colpisci un nemico
     createHitEffect(position) {
-        // Crea particelle o flash per indicare l'impatto
         const hitGeometry = new THREE.SphereGeometry(0.5, 8, 8);
         const hitMaterial = new THREE.MeshBasicMaterial({ 
             color: 0xffff00,
@@ -813,7 +785,6 @@ class Player {
         
         this.scene.add(hitFlash);
         
-        // Animazione espansione e fade
         const animateHit = () => {
             hitFlash.scale.multiplyScalar(1.1);
             hitMaterial.opacity *= 0.9;
@@ -884,24 +855,8 @@ class Player {
             this.hasDealtDamage = true;
         }
         
-        // Controlla se l'animazione di attacco è finita
-        if (this.currentAction) {
-            const clipDuration = this.currentAction.getClip().duration;
-            const currentTime = this.currentAction.time;
-            
-            // Se siamo negli ultimi frame dell'animazione e c'è input di attacco, concatena
-            if (currentTime > clipDuration * 0.7 && this.input.attack) {
-                // Reset per combo
-                this.currentAction.reset();
-                this.currentAction.play();
-                this.attackTimer = this.config.attackCooldown;
-                this.hasDealtDamage = false; // Reset per il prossimo colpo
-                console.log('Combo attacco!');
-            }
-        }
     }
 
-    // Update della spell di cura
     updateCastingHealSpell(deltaTime) {
         // Quasi immobile durante il cast
         const castMoveSpeed = this.config.walkSpeed * 0.15; // 15% della velocità normale
@@ -994,9 +949,31 @@ class Player {
         this.position.x += this.velocity.x * deltaTime;
         this.position.z += this.velocity.z * deltaTime;
         
-        // Controlla collisioni con i nemici
+        const playerRadius = this.config.collisionRadius || 1;
+        const treeCollisions = checkTreeCollision(this.position, playerRadius);
+        
+        if (treeCollisions) {
+            // Risolvi collisioni con alberi
+            const treePush = resolveTreeCollisions(this.position, playerRadius, treeCollisions);
+            this.position.add(treePush);
+            
+            // Rallenta il player quando urta contro gli alberi
+            const pushStrength = treePush.length();
+            if (pushStrength > 0.1) {
+                const normalizedPush = treePush.clone().normalize();
+                const velocityDot = this.velocity.dot(normalizedPush.negate());
+                
+                if (velocityDot > 0) {
+                    this.velocity.sub(normalizedPush.negate().multiplyScalar(velocityDot));
+                }
+                
+                this.velocity.multiplyScalar(0.7);
+            }
+        }
+        
+        // === COLLISIONI CON I NEMICI === 
         if (window.enemies) {
-            const playerRadius = 1; // Raggio di collisione del player
+            const playerRadius = 1; 
             
             window.enemies.forEach(enemy => {
                 if (enemy.isAlive()) {
@@ -1006,34 +983,26 @@ class Player {
                     const minDistance = playerRadius + enemyRadius;
                     
                     if (distance < minDistance && distance > 0) {
-                        // Calcola la direzione di push
+                        
                         const pushDirection = new THREE.Vector3()
                             .subVectors(this.position, enemyPos)
                             .normalize();
                         
-                        // Sposta SOLO il player, non il nemico
                         const overlap = minDistance - distance;
                         this.position.add(pushDirection.multiplyScalar(overlap));
                         
-                        // Ferma completamente il movimento del player in quella direzione
-                        // Questo crea una sensazione di "muro solido"
                         const velocityDot = this.velocity.dot(pushDirection.negate());
                         if (velocityDot > 0) {
-                            // Il player sta andando verso il nemico, ferma quella componente
                             this.velocity.sub(pushDirection.negate().multiplyScalar(velocityDot));
-                            
-                            // Aggiungi un po' di "rimbalzo" per feedback
                             this.velocity.add(pushDirection.negate().multiplyScalar(-2));
                         }
                         
-                        // Rallenta il player quando colpisce un nemico
                         this.velocity.multiplyScalar(0.3);
                     }
                 }
             });
         }
         
-        // Limiti del mondo
         const worldLimit = 98;
         this.position.x = Math.clamp(this.position.x, -worldLimit, worldLimit);
         this.position.z = Math.clamp(this.position.z, -worldLimit, worldLimit);
@@ -1094,14 +1063,12 @@ class Player {
         this.currentAction = newAction;
     }
 
-    // Esegue la spell di cura
     performHealSpell() {
         const previousHealth = this.config.health;
         this.config.health = Math.min(this.config.health + this.config.healSpellAmount, this.config.maxHealth);
         const actualHealed = this.config.health - previousHealth;
         
         if (actualHealed > 0) {
-            console.log(`Curato di ${actualHealed} HP! Salute: ${this.config.health}/${this.config.maxHealth}`);
             
             // Aggiorna l'UI della salute
             this.updateHealthUI();
@@ -1109,15 +1076,11 @@ class Player {
             // Crea popup verde per mostrare la cura
             this.createHealPopup(actualHealed);
             
-        } else {
-            console.log('Già a salute piena!');
         }
     }
 
     // Crea le spirali verdi che avvolgono il personaggio
     startHealingSpirals() {
-        // Non serve più - ora usiamo il sistema WebGL
-        console.log('💚 Avvio effetto di cura WebGL...');
         
         // Inizializza HealingSpell se non esiste
         if (!this.healingSpell) {
@@ -1131,18 +1094,16 @@ class Player {
         
         // Configurazione dell'effetto di cura
         const healingConfig = {
-            duration: this.config.healSpellCooldown * 1000, // Durata in millisecondi
-            radius: 2,    // Raggio dell'effetto
-            height: 4     // Altezza dell'effetto
+            duration: this.config.healSpellCooldown * 1000,
+            radius: 2,   
+            height: 4     
         };
         
-        // Crea l'effetto di cura WebGL
-        const healingId = this.healingSpell.createHealingEffect( // ← QUI: chiama metodo createHealingEffect dal file HealingSpell.js
+        const healingId = this.healingSpell.createHealingEffect(
             this.position,
             healingConfig
         );
         
-        // Crea il cerchio verde sotto al player
         this.createHealingCircleEffect();
         
         console.log(`💚 Effetto di cura WebGL ${healingId} creato!`);
@@ -1154,7 +1115,7 @@ class Player {
         // Cerchio verde di cura intorno al player
         const circleGeometry = new THREE.RingGeometry(1.5, 2.5, 16);
         const circleMaterial = new THREE.MeshBasicMaterial({
-            color: 0x22aa44, // Verde cura
+            color: 0x22aa44, 
             transparent: true,
             opacity: 0.7,
             side: THREE.DoubleSide
@@ -1167,17 +1128,17 @@ class Player {
         
         this.scene.add(healCircle);
         
-        // Animazione del cerchio
+    
         const startTime = Date.now();
         const animateCircle = () => {
             const elapsed = Date.now() - startTime;
-            const progress = elapsed / (this.config.healSpellCooldown * 1000); // Durata della spell
+            const progress = elapsed / (this.config.healSpellCooldown * 1000); 
             
             if (progress < 1) {
                 const scale = 1 + progress * 0.4;
                 healCircle.scale.set(scale, scale, scale);
                 circleMaterial.opacity = 0.7 * (1 - progress);
-                healCircle.rotation.z += 0.03; // Rotazione lenta in senso orario
+                healCircle.rotation.z += 0.03; 
                 requestAnimationFrame(animateCircle);
             } else {
                 this.scene.remove(healCircle);
@@ -1193,7 +1154,6 @@ class Player {
     createHealPopup(amount) {
         const popup = document.createElement('div');
         
-        // Posiziona il popup sopra la barra della vita
         popup.style.cssText = `
             position: fixed;
             left: 160px;
@@ -1210,16 +1170,13 @@ class Player {
         
         document.body.appendChild(popup);
         
-        // Rimuovi dopo l'animazione (stesso tempo dell'effetto WebGL)
         setTimeout(() => {
             popup.remove();
         }, 2000);
     }
 
     performShieldSpell() {
-        console.log('❄️ Creazione scudo di ghiaccio!');
-        
-        // Controlla se esiste già uno scudo attivo
+
         if (this.iceShield && this.iceShield.getActiveShieldsCount() > 0) {
             console.log('❄️ Scudo già attivo, impossibile crearne un altro');
             return;
@@ -1235,14 +1192,14 @@ class Player {
             return;
         }
         
-        // Configurazione dello scudo (durata rimossa, persistente fino al danno)
+        // Configurazione dello scudo
         const shieldConfig = {
-            radius: 3,      // Raggio di protezione
-            height: 4       // Altezza dello scudo
+            radius: 3,      
+            height: 4      
         };
         
         // Crea lo scudo di ghiaccio
-        const shieldId = this.iceShield.createIceShield( // ← QUI: chiama metodo createIceShield dal file IceShield.js
+        const shieldId = this.iceShield.createIceShield(
             this.position,
             shieldConfig
         );
@@ -1256,14 +1213,13 @@ class Player {
         console.log(`❄️ Scudo di ghiaccio ${shieldId} creato e rimarrà attivo fino al primo danno!`);
     }
 
-    // 7. Aggiungi i metodi per gli effetti visivi del cast:
     startShieldCastEffect() {
         if (!this.model) return;
         
         // Cerchio di ghiaccio intorno al player
         const circleGeometry = new THREE.RingGeometry(1.5, 2.5, 12);
         const circleMaterial = new THREE.MeshBasicMaterial({
-            color: 0x4488ff, // Blu normale per l'effetto di cast
+            color: 0x4488ff,
             transparent: true,
             opacity: 0.6,
             side: THREE.DoubleSide
@@ -1276,17 +1232,17 @@ class Player {
         
         this.scene.add(iceCircle);
         
-        // Animazione del cerchio
+        
         const startTime = Date.now();
         const animateCircle = () => {
             const elapsed = Date.now() - startTime;
-            const progress = elapsed / 1500; // 1.5 secondi
+            const progress = elapsed / 1500;
             
             if (progress < 1) {
                 const scale = 1 + progress * 0.3;
                 iceCircle.scale.set(scale, scale, scale);
                 circleMaterial.opacity = 0.6 * (1 - progress);
-                iceCircle.rotation.z -= 0.05; // Rotazione opposta al fuoco
+                iceCircle.rotation.z -= 0.05;
                 requestAnimationFrame(animateCircle);
             } else {
                 this.scene.remove(iceCircle);
@@ -1303,7 +1259,7 @@ class Player {
         for (let i = 0; i < 25; i++) {
             const particleGeometry = new THREE.SphereGeometry(0.15, 4, 4);
             const particleMaterial = new THREE.MeshBasicMaterial({
-                color: new THREE.Color().setHSL(0.6 + Math.random() * 0.1, 0.8, 0.7), // Blu-ciano normale per cast
+                color: new THREE.Color().setHSL(0.6 + Math.random() * 0.1, 0.8, 0.7),
                 transparent: true,
                 opacity: 1
             });
@@ -1320,7 +1276,7 @@ class Player {
             );
             
             const velocity = new THREE.Vector3(
-                Math.cos(angle) * (1 + Math.random() * 2), // Movimento più lento
+                Math.cos(angle) * (1 + Math.random() * 2),
                 1 + Math.random() * 3,
                 Math.sin(angle) * (1 + Math.random() * 2)
             );
@@ -1329,8 +1285,8 @@ class Player {
             
             const animateParticle = () => {
                 particle.position.add(velocity.clone().multiplyScalar(0.016));
-                velocity.multiplyScalar(0.96); // Rallenta più velocemente
-                velocity.y -= 0.05; // Meno gravità
+                velocity.multiplyScalar(0.96); 
+                velocity.y -= 0.05;
                 particleMaterial.opacity -= 0.015;
                 
                 if (particleMaterial.opacity > 0) {
@@ -1384,9 +1340,6 @@ class Player {
     }
     
     performUltimate() {
-        console.log('🔥 ULTIMATE: Muro di Fuoco lanciato!');
-        
-        // Inizializza FireWall se non esiste
         if (!this.fireWall) {
             this.initFireWall();
         }
@@ -1430,7 +1383,7 @@ class Player {
         };
         
         // Crea il muro di fuoco
-        const fireWallId = this.fireWall.createFireWall( // ← QUI: chiama metodo createFireWall dal file FireWall.js
+        const fireWallId = this.fireWall.createFireWall(
             spawnPosition,
             playerDirection,
             fireWallConfig
@@ -1448,7 +1401,6 @@ class Player {
         console.log(`🔥 Muro di fuoco ${fireWallId} creato!`);
     }
 
-    // 4. Aggiungi questi metodi DOPO performUltimate:
     createUltimateStartEffect() {
         if (!this.model) return;
         
@@ -1540,7 +1492,7 @@ class Player {
 
     initHealingSpell() {
         if (!this.healingSpell && typeof HealingSpell !== 'undefined') {
-            this.healingSpell = new HealingSpell(this.scene); // ← QUI: crea istanza della classe HealingSpell dal file HealingSpell.js
+            this.healingSpell = new HealingSpell(this.scene);
             console.log('✅ HealingSpell inizializzato');
         }
         return this.healingSpell;
@@ -1548,7 +1500,7 @@ class Player {
 
     initIceShield() {
         if (!this.iceShield && typeof IceShield !== 'undefined') {
-            this.iceShield = new IceShield(this.scene); // ← QUI: crea istanza della classe IceShield dal file IceShield.js
+            this.iceShield = new IceShield(this.scene);
             console.log('✅ IceShield inizializzato');
         }
         return this.iceShield;
@@ -1556,7 +1508,7 @@ class Player {
 
     initFireWall() {
         if (!this.fireWall && typeof FireWall !== 'undefined') {
-            this.fireWall = new FireWall(this.scene); // ← QUI: crea istanza della classe FireWall dal file FireWall.js
+            this.fireWall = new FireWall(this.scene);
             console.log('✅ FireWall inizializzato');
         }
         return this.fireWall;
@@ -1577,40 +1529,33 @@ class Player {
         if (this.iceShield) {
             const protectingShield = this.iceShield.isPlayerProtected(this.position);
             if (protectingShield) {
-                // Lo scudo blocca l'attacco
-                this.iceShield.blockAttack(protectingShield.id);
-                console.log('❄️ Attacco bloccato dallo scudo di ghiaccio!');
                 
-                // IMPORTANTE: Avvia il cooldown SOLO ORA che lo scudo è stato distrutto
+                this.iceShield.blockAttack(protectingShield.id);
+                console.log('❄️ Attack blocked by ice shield!');
+                
                 this.lastShieldKills = this.killCount;
                 
-                // IMPORTANTE: Lo scudo non è più attivo
                 this.isShieldActive = false;
-                console.log(`🛡️ Scudo distrutto! Flag attivo: ${this.isShieldActive}`);
+                console.log(`🛡️ Shield destroyed! Active flag: ${this.isShieldActive}`);
                 
-                // RESETTA la notifica quando lo scudo viene consumato
                 this.spellNotified.shield = false;
-                console.log(`🛡️ Cooldown scudo avviato a kill: ${this.killCount}`);
+                console.log(`🛡️ Shield cooldown started at kill: ${this.killCount}`);
                 
-                // Rimuovi lo scudo dalla lista degli scudi attivi del player
                 this.activeIceShields = this.activeIceShields.filter(shield => shield.id !== protectingShield.id);
                 
-                // Aggiorna l'UI dei cooldown
                 this.updateSpellCooldownUI();
                 
-                // Crea effetto visivo di blocco sul player
                 this.createShieldBlockFeedback();
-                return; // Non subire danno
+                return;
             }
         }
 
         this.config.health -= amount;
         this.config.health = Math.max(0, this.config.health);
         
-        // Aggiorna l'UI della salute
+        // Aggiorna la vita del player
         this.updateHealthUI();
         
-        // Effetto di shake quando subisce danno
         if (this.healthUI && this.healthUI.container) {
             this.healthUI.container.classList.add('damage-shake');
             setTimeout(() => {
@@ -1623,28 +1568,23 @@ class Player {
         if (this.config.health <= 0) {
             this.changeState(PlayerStates.DEAD);
             
-            // Rendi l'UI semi-trasparente quando muore
             if (this.healthUI && this.healthUI.container) {
                 this.healthUI.container.style.opacity = '0.3';
             }
+            
+            setTimeout(() => {
+                if (window.deathScreen) {
+                    window.deathScreen.showDeathScreen(this);
+                } else {
+                    console.error('Death screen not available!');
+                }
+            }, 2000);
+            
         } else {
             this.changeState(PlayerStates.HURT);
         }
         
-        // Flash rosso sul modello
-        if (this.model) {
-            this.model.traverse((child) => {
-                if (child.isMesh && child.material) {
-                    const originalColor = child.material.color.clone();
-                    child.material.color.setHex(0xff0000);
-                    setTimeout(() => {
-                        child.material.color.copy(originalColor);
-                    }, 100);
-                }
-            });
-        }
-        
-        console.log(`Player colpito! Danno: ${amount}, Salute: ${this.config.health}/${this.config.maxHealth}`);
+        console.log(`Player hit! Damage: ${amount}, Health: ${this.config.health}/${this.config.maxHealth}`);
     }
 
     initHealthUI() {
@@ -1749,7 +1689,7 @@ class Player {
         
         // Calcola la posizione centrale
         // Se hai l'UI del punteggio, posiziona sotto di essa
-        let topPosition = '80px'; // Default sotto il punteggio principale
+        let topPosition = '80px';
         
         if (this.scoreUI && this.scoreUI.container) {
             const scoreRect = this.scoreUI.container.getBoundingClientRect();
@@ -1789,12 +1729,6 @@ class Player {
 
     addKill() {
         this.killCount++;
-        console.log(`💀 Nemico ucciso! Kill totali: ${this.killCount}`);
-        
-        // Log dello stato delle spell
-        console.log(`🛡️ Scudo: ${this.getShieldCooldownRemaining()} kill rimanenti`);
-        console.log(`💚 Cura: ${this.getHealCooldownRemaining()} kill rimanenti`);
-        console.log(`🔥 Fuoco: ${this.getFireWallCooldownRemaining()} kill rimanenti`);
         
         // Aggiorna l'UI se esiste
         this.updateSpellCooldownUI();
@@ -1803,7 +1737,6 @@ class Player {
         this.checkSpellUnlocks();
     }
 
-    // 6b. Metodo per controllare e notificare quando le spell si sbloccano:
     checkSpellUnlocks() {
         const shieldReady = this.canUseShield();
         const healReady = this.canUseHeal();
@@ -1823,7 +1756,7 @@ class Player {
         }
     }
 
-    // 7. Metodi per ottenere i kill rimanenti per ogni spell:
+    // Metodi per ottenere i kill rimanenti per ogni spell:
     getShieldCooldownRemaining() {
         const killsSinceLastUse = this.killCount - this.lastShieldKills;
         return Math.max(0, this.spellKillRequirements.shield - killsSinceLastUse);
@@ -1948,34 +1881,6 @@ class Player {
             }
         }
     }
-
-    debugSpellSystem() {
-        console.log('=== DEBUG SPELL SYSTEM ===');
-        console.log('SpellEffects istanza:', this.spellEffects);
-        console.log('Scene:', this.scene);
-        console.log('Timer Ultimate:', this.ultyTimer);
-        
-        // Conta i muri di fuoco nella scena
-        let fireWallCount = 0;
-        this.scene.traverse(child => {
-            if (child.name && child.name.startsWith('FireWall_')) {
-                fireWallCount++;
-                console.log('Trovato muro:', child.name, 'Posizione:', child.position);
-            }
-        });
-        console.log('Muri di fuoco nella scena:', fireWallCount);
-        
-        // Prova a pulire manualmente
-        if (this.spellEffects) {
-            console.log('Eseguo pulizia manuale...');
-            this.spellEffects.dispose();
-        }
-        
-        // Ricrea SpellEffects
-        console.log('Ricreo SpellEffects...');
-        this.spellEffects = new SpellEffects(this.scene);
-        console.log('SpellEffects ricreato:', this.spellEffects);
-    }
     // ========== GETTERS ==========
     
     getPosition() {
@@ -2012,6 +1917,10 @@ class Player {
 
     getScore() {
         return this.score;
+    }
+
+    getKillCount() {
+        return this.killCount;
     }
 
 }

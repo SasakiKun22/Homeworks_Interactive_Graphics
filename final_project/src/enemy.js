@@ -1,5 +1,3 @@
-// enemy.js - Sistema nemici con macchina a stati finiti
-
 // Stati del nemico
 const EnemyStates = {
     IDLE: 'idle',
@@ -141,7 +139,6 @@ class Enemy {
                     [EnemyStates.IDLE]: '../models/enemies/orc/Idle.fbx',
                     [EnemyStates.WANDERING]: '../models/enemies/orc/Walk.fbx',
                     [EnemyStates.ATTACKING]: '../models/enemies/orc/Attack.fbx',
-                    // [EnemyStates.HURT]: 'models/enemies/orc/Hit.fbx',
                     [EnemyStates.DEAD]: '../models/enemies/orc/Death.fbx',
                 }
             },
@@ -166,7 +163,6 @@ class Enemy {
                     [EnemyStates.WANDERING]: '../models/enemies/vampire/Walk.fbx',
                     [EnemyStates.ATTACKING]: '../models/enemies/vampire/Bite.fbx',
                     [EnemyStates.DEAD]: '../models/enemies/vampire/Death.fbx',
-                    // Aggiungi altre animazioni del vampiro qui
                 }
             }
         };
@@ -221,9 +217,6 @@ class Enemy {
         
         // Aggiungi alla scena
         this.scene.add(this.model);
-        
-        // Crea barra della salute
-        this.createHealthBar();
         
         this.isModelLoaded = true;
     }
@@ -375,45 +368,7 @@ class Enemy {
         // Aggiungi alla scena
         this.scene.add(this.model);
         
-        // Crea barra della salute
-        this.createHealthBar();
-        
         this.isModelLoaded = true;
-    }
-    
-    // Crea barra della salute
-    createHealthBar() {
-        if (!this.model) return;
-        
-        const barWidth = this.config.size;
-        const barHeight = 0.1;
-        
-        // Container della barra
-        const healthBarContainer = new THREE.Group();
-        
-        // Background (rosso)
-        const bgGeometry = new THREE.PlaneGeometry(barWidth, barHeight);
-        const bgMaterial = new THREE.MeshBasicMaterial({ 
-            color: 0xff0000,
-            side: THREE.DoubleSide
-        });
-        const bgBar = new THREE.Mesh(bgGeometry, bgMaterial);
-        healthBarContainer.add(bgBar);
-        
-        // Barra della salute (verde)
-        const healthGeometry = new THREE.PlaneGeometry(barWidth, barHeight);
-        const healthMaterial = new THREE.MeshBasicMaterial({ 
-            color: 0x00ff00,
-            side: THREE.DoubleSide
-        });
-        this.healthBar = new THREE.Mesh(healthGeometry, healthMaterial);
-        this.healthBar.position.z = 0.01;
-        healthBarContainer.add(this.healthBar);
-        
-        healthBarContainer.position.y = this.config.size * 2.5;
-        this.model.add(healthBarContainer);
-        
-        this.healthBarContainer = healthBarContainer;
     }
     
     // ========== UPDATE PRINCIPALE ==========
@@ -465,9 +420,6 @@ class Enemy {
                 this.rootBone.position.z = this.rootBoneInitialPosition.z;
             }
         }
-        
-        // Update barra salute
-        this.updateHealthBar();
         
         // Update timers
         this.updateTimers(deltaTime);
@@ -744,16 +696,6 @@ class Enemy {
             this.targetRotation = Math.atan2(direction.x, direction.z);
         }
         
-        // Debug visivo opzionale: cambia colore durante inseguimento
-        if (this.model && this.model.children[0] && this.model.children[0].material) {
-            // Tinge leggermente di rosso durante l'inseguimento
-            if (!this.originalColor) {
-                this.originalColor = this.model.children[0].material.color.getHex();
-            }
-            // Mix tra colore originale e rosso
-            const aggroColor = 0xff6666;
-            this.model.children[0].material.color.setHex(aggroColor);
-        }
     }
     
     updateAttacking(deltaTime) {
@@ -787,8 +729,6 @@ class Enemy {
                     console.log(`[${this.id}] ${this.type} infligge ${this.config.attackDamage} danni al player!`);
                 }
                 
-                // Effetto visivo dell'attacco
-                this.createAttackEffect();
             }
             
             this.hasDealtDamage = true;
@@ -800,36 +740,6 @@ class Enemy {
         }
     }
 
-    // Effetto visivo dell'attacco
-    createAttackEffect() {
-        if (!this.model) return;
-        
-        // Crea un effetto slash davanti al nemico
-        const slashGeometry = new THREE.RingGeometry(1, 2, 4, 1, 0, Math.PI/2);
-        const slashMaterial = new THREE.MeshBasicMaterial({ 
-            color: 0xff0000, 
-            transparent: true, 
-            opacity: 0.5,
-            side: THREE.DoubleSide
-        });
-        const slash = new THREE.Mesh(slashGeometry, slashMaterial);
-        
-        // Posiziona davanti al nemico
-        slash.position.copy(this.position);
-        slash.position.y = 1;
-        slash.position.z = -0.5;
-        slash.rotation.x = -Math.PI / 2;
-        slash.rotation.z = Math.PI;
-        
-        this.scene.add(slash);
-        
-        // Rimuovi dopo poco
-        setTimeout(() => {
-            this.scene.remove(slash);
-            slash.geometry.dispose();
-            slash.material.dispose();
-        }, 200);
-    }
     
     updateHurt(deltaTime) {
         // Piccolo knockback
@@ -837,7 +747,6 @@ class Enemy {
     }
     
     updateDead(deltaTime) {
-        // Nessun movimento
         this.velocity.set(0, 0, 0);
     }
     
@@ -860,27 +769,71 @@ class Enemy {
             const minDistance = (this.config.collisionRadius || this.config.size * 0.8) + playerRadius;
             
             if (distance < minDistance && distance > 0) {
-                // I nemici vengono spinti MOLTO POCO dal player
-                // Questo li rende più "pesanti" e difficili da spostare
                 const pushDirection = new THREE.Vector3()
                     .subVectors(this.position, playerPos)
                     .normalize();
                 
                 const overlap = minDistance - distance;
                 
-                // Sposta il nemico solo di una frazione minima (10% dell'overlap)
-                // Questo fa sì che sia principalmente il player a essere bloccato
+                // Sposta il nemico solo di una frazione minima
                 this.position.add(pushDirection.multiplyScalar(overlap * 0.1));
                 
-                // Riduci anche la velocità del nemico quando viene colpito dal player
-                // Ma non troppo se sta inseguendo
                 if (!this.stateMachine.isState(EnemyStates.CHASING)) {
                     this.velocity.multiplyScalar(0.8);
                 }
             }
         }
 
-        // Controlla collisioni con altri nemici - SISTEMA MIGLIORATO
+        const enemyRadius = this.config.collisionRadius || this.config.size * 0.8;
+        const treeCollisions = checkTreeCollision(this.position, enemyRadius);
+
+        if (treeCollisions) {
+            // Risolvi collisioni con alberi
+            const treePush = resolveTreeCollisions(this.position, enemyRadius, treeCollisions);
+            this.position.add(treePush);
+            
+            // Effetto sulla velocità del nemico
+            const pushStrength = treePush.length();
+            if (pushStrength > 0.1) {
+                // Se il nemico sta inseguendo, prova a aggirare l'ostacolo
+                if (this.stateMachine.isState(EnemyStates.CHASING)) {
+                    // Calcola direzione laterale per aggirare
+                    const pushDirection = treePush.clone().normalize();
+                    const lateralDirection = new THREE.Vector3(-pushDirection.z, 0, pushDirection.x);
+                    
+                    // Scegli la direzione laterale che va più verso il player
+                    if (this.player && this.player.isAlive()) {
+                        const toPlayer = new THREE.Vector3()
+                            .subVectors(this.player.getPosition(), this.position)
+                            .normalize();
+                        
+                        // Se la direzione laterale destra è più allineata al player, usala
+                        const rightDot = lateralDirection.dot(toPlayer);
+                        const leftDot = lateralDirection.clone().negate().dot(toPlayer);
+                        
+                        if (leftDot > rightDot) {
+                            lateralDirection.negate();
+                        }
+                    }
+                    
+                    // Applica spinta laterale per aggirare
+                    this.velocity.add(lateralDirection.multiplyScalar(3));
+                }
+                
+                // Rimuovi la componente della velocità che va verso l'albero
+                const normalizedPush = treePush.clone().normalize();
+                const velocityDot = this.velocity.dot(normalizedPush.negate());
+                
+                if (velocityDot > 0) {
+                    this.velocity.sub(normalizedPush.negate().multiplyScalar(velocityDot));
+                }
+                
+                // Rallenta leggermente
+                this.velocity.multiplyScalar(0.8);
+            }
+        }
+
+        // Controlla collisioni con altri nemici
         if (window.enemies) {
             window.enemies.forEach(otherEnemy => {
                 if (otherEnemy !== this && otherEnemy.isAlive()) {
@@ -890,7 +843,7 @@ class Enemy {
                     const otherRadius = otherEnemy.config.collisionRadius || otherEnemy.config.size * 0.6;
                     const minDistance = thisRadius + otherRadius;
                     
-                    if (distance < minDistance && distance > 0.01) { // Evita divisione per zero
+                    if (distance < minDistance && distance > 0.01) {
                         // Calcola la direzione di push
                         const pushDirection = new THREE.Vector3()
                             .subVectors(this.position, otherPos)
@@ -898,8 +851,7 @@ class Enemy {
                         
                         const overlap = minDistance - distance;
                         
-                        // Sposta ENTRAMBI i nemici equamente (50% ciascuno)
-                        // Questo previene la compenetrazione
+                        // Sposta entrambi i nemici equamente
                         this.position.add(pushDirection.multiplyScalar(overlap * 0.5));
                         
                         // Sposta anche l'altro nemico nella direzione opposta
@@ -910,14 +862,12 @@ class Enemy {
                         const velocityTowardsEachOther = relativeVelocity.dot(pushDirection.negate());
                         
                         if (velocityTowardsEachOther > 0) {
-                            // Riduci la componente della velocità che li porta l'uno verso l'altro
                             const correction = pushDirection.multiplyScalar(velocityTowardsEachOther * 0.5);
                             this.velocity.sub(correction);
                             otherEnemy.velocity.add(correction);
                         }
                         
                         // Aggiungi una piccola forza di separazione per evitare che restino incastrati
-                        // Specialmente importante quando inseguono lo stesso target
                         if (this.stateMachine.isState(EnemyStates.CHASING) && 
                             otherEnemy.stateMachine.isState(EnemyStates.CHASING)) {
                             // Forza laterale per separarli quando inseguono
@@ -960,31 +910,6 @@ class Enemy {
         this.model.rotation.y = this.rotation;
     }
     
-    updateHealthBar() {
-        if (!this.healthBar) return;
-        
-        // Scala la barra in base alla salute
-        const healthPercent = this.config.health / this.config.maxHealth;
-        this.healthBar.scale.x = Math.max(0, healthPercent);
-        this.healthBar.position.x = -(1 - healthPercent) * this.config.size * 0.5;
-        
-        // Cambia colore in base alla salute
-        if (healthPercent > 0.6) {
-            this.healthBar.material.color.setHex(0x00ff00); // Verde
-        } else if (healthPercent > 0.3) {
-            this.healthBar.material.color.setHex(0xffff00); // Giallo
-        } else {
-            this.healthBar.material.color.setHex(0xff0000); // Rosso
-        }
-        
-        // Fai guardare sempre la barra verso la camera
-        if (this.healthBarContainer) {
-            const camera = this.scene.getObjectByProperty('isCamera', true);
-            if (camera) {
-                this.healthBarContainer.lookAt(camera.position);
-            }
-        }
-    }
     
     updateTimers(deltaTime) {
         this.idleTimer -= deltaTime;
@@ -1027,7 +952,6 @@ class Enemy {
         this.config.health -= amount;
         this.config.health = Math.max(0, this.config.health);
         
-        console.log(`[${this.id}] ${this.type} colpito! Danno: ${amount}, Salute: ${this.config.health}/${this.config.maxHealth}`);
         
         if (this.config.health <= 0) {
             this.changeState(EnemyStates.DEAD);
@@ -1051,9 +975,6 @@ class Enemy {
                 this.velocity.add(knockbackDirection.multiplyScalar(8));
             }
             
-            // Flash di danno
-            //wadathis.flashDamage();
-            
             // Dopo essere stato colpito, se il player è vicino, inizia a inseguirlo
             setTimeout(() => {
                 if (this.isAlive() && this.player && this.player.isAlive()) {
@@ -1066,50 +987,11 @@ class Enemy {
         }
     }
     
-    flashDamage() {
-        if (!this.model) return;
-        
-        // Flash bianco per tutti i mesh del modello
-        const flashColor = 0xffffff;
-        const originalColors = [];
-        
-        this.model.traverse((child) => {
-            if (child.isMesh && child.material) {
-                // Salva il colore originale
-                originalColors.push({
-                    mesh: child,
-                    color: child.material.color.clone(),
-                    emissive: child.material.emissive ? child.material.emissive.clone() : null
-                });
-                
-                // Applica il flash
-                child.material.color.setHex(flashColor);
-                if (child.material.emissive) {
-                    child.material.emissive.setHex(0xff0000);
-                }
-            }
-        });
-        
-        // Ripristina i colori originali dopo un breve delay
-        setTimeout(() => {
-            originalColors.forEach(item => {
-                if (item.mesh.material) {
-                    item.mesh.material.color.copy(item.color);
-                    if (item.emissive && item.mesh.material.emissive) {
-                        item.mesh.material.emissive.copy(item.emissive);
-                    }
-                }
-            });
-        }, 100);
-    }
-    
     onDeath() {
-        console.log(`[${this.id}] Morto!`);
         
-        // IMPORTANTE: Notifica al player che ha fatto un kill
+        // Notifica al player che ha fatto un kill
         if (window.player && typeof window.player.addKill === 'function') {
             window.player.addKill();
-            console.log(`💀 Kill registrato per ${this.type}!`);
         } else {
             console.warn('Player non trovato o metodo addKill non disponibile');
         }

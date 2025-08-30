@@ -11,7 +11,6 @@ class IceShield {
         this.iceTexture = this.createIceTexture();
         this.sparkleTexture = this.createSparkleTexture();
         
-        console.log('✅ IceShield inizializzato');
     }
 
     // Crea texture procedurale per il ghiaccio
