@@ -1,13 +1,103 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cavaliere vs Mostri</title>
+    <title>Paladin Survivors</title>
     <link rel="stylesheet" href="base.css">
 </head>
 <body>
-    <div id="loading">Caricamento...</div>
+    <!-- Start Screen -->
+    <div id="start-screen">
+        <!-- Animated Stars Background -->
+        <div class="stars" id="stars-container"></div>
+        
+        <div class="menu-container">
+            <h1 class="game-title">PALADIN SURVIVORS</h1>
+            <p class="subtitle">Survive the horde in the eternal night</p>
+            
+            <button class="start-button" onclick="startGame()">
+                START GAME
+            </button>
+            
+            <div class="controls">
+                <h3>CONTROLS</h3>
+                <div class="controls-grid">
+                    <div class="control-item">
+                        <span class="key">W A S D</span>
+                        <span class="control-desc">Movement</span>
+                    </div>
+                    <div class="control-item">
+                        <span class="key">MOUSE</span>
+                        <span class="control-desc">Aim and attack</span>
+                    </div>
+                    <div class="control-item">
+                        <span class="key">CLICK</span>
+                        <span class="control-desc">Sword attack</span>
+                    </div>
+                </div>
+                
+                <div class="spells-section">
+                    <h4>SPECIAL SPELLS</h4>
+                    <div class="spell-item">
+                        <span class="spell-icon">💚</span>
+                        <span class="key">E</span>
+                        <div class="spell-info">
+                            <div class="spell-name">Heal</div>
+                            <div class="spell-cost">Cost: 7 kills</div>
+                        </div>
+                    </div>
+                    <div class="spell-item">
+                        <span class="spell-icon">🛡️</span>
+                        <span class="key">Q</span>
+                        <div class="spell-info">
+                            <div class="spell-name">Ice Shield</div>
+                            <div class="spell-cost">Cost: 5 kills</div>
+                        </div>
+                    </div>
+                    <div class="spell-item">
+                        <span class="spell-icon">🔥</span>
+                        <span class="key">R</span>
+                        <div class="spell-info">
+                            <div class="spell-name">Fire Wall</div>
+                            <div class="spell-cost">Cost: 10 kills</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Death Screen -->
+    <div id="death-screen">
+        <!-- Floating skulls animation -->
+        <div class="floating-skulls" id="floating-skulls"></div>
+        
+        <div class="death-container">
+            <h1 class="death-title">YOU DIED</h1>
+            <p class="death-subtitle">The darkness has consumed you...</p>
+            
+            <div class="death-stats">
+                <h3>FINAL STATS</h3>
+                <div class="stat-row">
+                    <span class="stat-label">Final Score</span>
+                    <span class="stat-value final-score" id="death-final-score">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Enemies Killed</span>
+                    <span class="stat-value" id="death-kills">0</span>
+                </div>
+            </div>
+            
+            <div class="death-actions">
+                <button class="death-button menu-button" onclick="returnToMenu()">
+                    MAIN MENU
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="loading">Loading...</div>
 
     <div id="player-health-ui">
         <div class="health-label">HEALTH</div>
@@ -19,14 +109,14 @@
         </div>
     </div>
 
-    <!-- UI del punteggio -->
+    <!-- Score UI -->
     <div id="score-ui">
         <div class="score-label">SCORE</div>
         <div id="score-value" class="score-value">0</div>
     </div>
 
     <div id="spell-ui">
-        <!-- Spell di Cura -->
+        <!-- Heal Spell -->
         <div id="heal-spell" class="spell-slot spell-ready">
             <div class="spell-icon">💚</div>
             <div class="spell-key">E</div>
@@ -34,7 +124,7 @@
             <div class="spell-tooltip">Heal Spell - 7 kills</div>
         </div>
         
-        <!-- Spell Scudo -->
+        <!-- Shield Spell -->
         <div id="shield-spell" class="spell-slot spell-ready">
             <div class="spell-icon">🛡️</div>
             <div class="spell-key">Q</div>
@@ -42,7 +132,7 @@
             <div class="spell-tooltip">Ice Shield - 5 kills</div>
         </div>
         
-        <!-- Spell Fuoco -->
+        <!-- Fire Spell -->
         <div id="firewall-spell" class="spell-slot spell-ready">
             <div class="spell-icon">🔥</div>
             <div class="spell-key">R</div>
@@ -57,11 +147,17 @@
     
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/FBXLoader.js"></script>
 
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
+    <script src="./src/trees.js"></script>
+    <script src="./src/willOWisps.js"></script>
     <script src="./src/healingSpell.js"></script>
     <script src="./src/iceShield.js"></script>
     <script src="./src/fireWall.js"></script>
     <script src="./src/player.js"></script>
     <script src="./src/enemy.js"></script>
+    <script src="./src/startScreen.js"></script>
+    <script src="./src/deathScreen.js"></script>
     <script src="./src/main.js"></script>
     
 </body>
